@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-001' });
 
     // For older patterns, ensure the prompt structure is what Gemini expects.
     // `generateContentStream` takes `GenerateContentRequest` which has `contents`.
