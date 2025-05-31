@@ -1,55 +1,14 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { StreamingTextResponse, GoogleGenerativeAIStream, type Message } from 'ai'; // Used GoogleGenerativeAIStream
+import { streamText } from 'ai';
+import { google } from '@ai-sdk/google';
 
-export const runtime = 'edge';
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  try {
-    const { messages }: { messages: Message[] } = await req.json();
+  const { messages } = await req.json();
 
-    if (!messages || messages.length === 0) {
-      return new Response(JSON.stringify({ error: 'No messages provided' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-    // Extract the last user message for the prompt
-    const userMessageContent = messages[messages.length - 1].content;
+  const model = google('gemini-2.0-flash-001');
 
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
-      console.error('GOOGLE_GENERATIVE_AI_API_KEY is not set.');
-      return new Response(JSON.stringify({ error: 'API key not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+  const result = streamText({ model, messages, });
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-001' });
-
-    // For older patterns, ensure the prompt structure is what Gemini expects.
-    // `generateContentStream` takes `GenerateContentRequest` which has `contents`.
-    const stream = await model.generateContentStream({
-        contents: [{ role: "user", parts: [{ text: userMessageContent }] }],
-        // Consider adding generationConfig and safetySettings if needed
-    });
-
-    // Adapt the stream from Gemini SDK to Vercel AI SDK stream
-    const aiStream = GoogleGenerativeAIStream(stream); // Used GoogleGenerativeAIStream
-
-    // Respond with the stream
-    return new StreamingTextResponse(aiStream);
-
-  } catch (error: unknown) {
-    console.error('Error in chat API:', error);
-    let errorDetails = 'Internal server error';
-    if (error instanceof Error) {
-      errorDetails = error.message;
-    }
-    return new Response(JSON.stringify({ error: errorDetails }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  return result.toDataStreamResponse();
 }

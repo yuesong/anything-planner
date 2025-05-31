@@ -1,56 +1,78 @@
 'use client';
 
-import { useChat, type Message } from 'ai/react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useChat, type Message } from '@ai-sdk/react';
+import { stat } from "fs";
+import { useEffect, useRef } from 'react';
 
 export default function HomePage() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat({
-    api: '/api/chat'
+  const { messages, input, handleInputChange, handleSubmit, error } = useChat({
+    api: '/api/chat',
+    // Optional: Clear input on successful submission is usually default, but can be explicit
+    // onFinish: () => { /* Potentially clear input or other actions */ },
   });
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   return (
     <div className="flex flex-col h-screen max-h-screen p-4 sm:p-6 md:p-8 bg-background text-foreground">
       <header className="py-4 shrink-0">
         <h1 className="text-3xl sm:text-4xl font-bold text-center text-primary">
-          AI Goal Assistant
+          Anything Planner
         </h1>
       </header>
 
+      {error && (
+        <div className="mb-4 p-3 rounded-md bg-destructive text-destructive-foreground text-center">
+          <p>Error: {error.message}</p>
+        </div>
+      )}
+
       {/* Updated main content area for chat messages */}
       <ScrollArea className="flex-grow rounded-lg border bg-card shadow-inner my-4">
-        <div className="p-4 space-y-4"> {/* Added space-y-4 for message spacing */}
-          {messages.length > 0 ? messages.map((m: Message) => (
-            <div
-              key={m.id}
-              className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`} // Align messages
-            >
+        <div className="p-4 space-y-4">
+          {messages.length > 0 ? (
+            messages.map((m: Message) => (
               <div
-                className={`whitespace-pre-wrap p-3 rounded-lg shadow max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl ${ // Added max-width for messages
-                  m.role === 'user'
-                    ? 'bg-blue-500 text-white self-end rounded-br-none' // User message style
-                    : 'bg-muted text-foreground self-start rounded-bl-none' // AI message style
-                }`}
+                key={m.id}
+                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <strong className="font-semibold block pb-1"> {/* Made role bold and block */}
-                  {m.role === 'user' ? 'You' : 'AI Assistant'}
-                </strong>
-                {m.content}
+                <div
+                  className={`whitespace-pre-wrap p-3 rounded-lg shadow max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl ${
+                    m.role === 'user'
+                      ? 'bg-primary text-primary-foreground self-end rounded-br-none' // User message style (using primary color)
+                      : 'bg-muted text-foreground self-start rounded-bl-none' // AI message style
+                  }`}
+                >
+                  <strong className="font-semibold block pb-1">
+                    {m.role === 'user' ? 'You' : 'AI Assistant'}
+                  </strong>
+                  {m.content}
+                </div>
               </div>
-            </div>
-          )) : (
+            ))
+          ) : (
             <div className="flex items-center justify-center h-full">
               <p className="text-lg text-muted-foreground">
                 No messages yet. Start by typing your goal below.
               </p>
             </div>
           )}
+          <div ref={messagesEndRef} /> {/* Element to scroll to */}
         </div>
       </ScrollArea>
 
       <footer className="py-4 shrink-0 sticky bottom-0 bg-background">
-        <form onSubmit={handleSubmit} className="flex w-full max-w-2xl mx-auto items-center space-x-2"> {/* Removed card bg from form container */}
+        <form
+          onSubmit={handleSubmit}
+          className="flex w-full max-w-2xl mx-auto items-center space-x-2"
+        >
           <Input
             value={input}
             onChange={handleInputChange}
